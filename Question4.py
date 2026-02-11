@@ -1,10 +1,13 @@
 import pandas as pd
+from sklearn import datasets
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder #had to use this
-                                              # because I kept getting an ValueError: Input contains NaN
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 
-#load data frame from csv first
-loadKidneyDiseaseDataFrame = pd.read_csv('kidney_disease.csv')
+#Load data
+iris = datasets.load_iris()
+loadKidneyDiseaseDataFrame = pd.DataFrame(data=iris.data, columns=iris.feature_names)
+loadKidneyDiseaseDataFrame["classification"] = iris.target
 
 
 #Create a matrix X that contains all columns except CKD.
@@ -17,37 +20,16 @@ X = loadKidneyDiseaseDataFrame.drop(columns=["classification"])
 featureMatrix = loadKidneyDiseaseDataFrame.loc[:, X.columns]
 
 
-
 #Create a label vector y using CKD column
 
 #y = loadKidneyDiseaseDataFrame["classification"]
 #targetMatrix = loadKidneyDiseaseDataFrame.loc[:, ["classification"]]
-targetMatrix = loadKidneyDiseaseDataFrame["classification"].str.strip().str.lower()
-# *NEW* ensures 1D series removes DataConversionWarning. .str.strip() removes 'ckd\t'
-
+targetMatrix = loadKidneyDiseaseDataFrame["classification"]
 
 
 #*NEW*
-# Fill missing values
-
-# Numeric columns: fill with median
-numericColumns = featureMatrix.select_dtypes(include=['float64', 'int64']).columns
-for col in numericColumns:
-    featureMatrix[col] = featureMatrix[col].fillna(featureMatrix[col].median())
-
-# Categorical columns: fill with mode
-categoricalColumns = featureMatrix.select_dtypes(include=['object', 'string']).columns
-for col in categoricalColumns:
-    featureMatrix[col] = featureMatrix[col].fillna(featureMatrix[col].mode()[0])
-
-
-# Encode categorical columns
-
-for col in categoricalColumns:
-    le = LabelEncoder()
-    featureMatrix[col] = le.fit_transform(featureMatrix[col])
-
-
+# No missing values in Iris dataset, so no need to fill NaNs
+# No categorical columns to encode in Iris dataset
 
 
 #Split Training Data(70%)
@@ -55,7 +37,13 @@ for col in categoricalColumns:
 #Use train_test_split with a fixed random_state
 #random_state(test_size=0.3) leaving rest 70% for training
 featureMatrix_train, featureMatrix_test, targetMatrix_train, targetMatrix_test = train_test_split(
-    featureMatrix, targetMatrix, test_size=0.3)
+    featureMatrix, targetMatrix, test_size=0.3, random_state=42)
+
+print("Feature Matrix Train:", featureMatrix_train.shape)
+print("Feature Matrix Test:", featureMatrix_test.shape)
+print("Target Matrix Train:", targetMatrix_train.shape)
+print("Target Matrix Test:", targetMatrix_test.shape)
+print(targetMatrix_train.value_counts())
 
 
 # Train K-Nearest Neighbors classifier.
@@ -63,13 +51,8 @@ featureMatrix_train, featureMatrix_test, targetMatrix_train, targetMatrix_test =
 # Train the model using training data.
 # Then use trained model to predict the labels of the test data.
 
-
-
 #*NEW*
 #before computing
-# Import KNN
-from sklearn.neighbors import KNeighborsClassifier
-
 # Create KNN model with k=5
 knn_model = KNeighborsClassifier(n_neighbors=5)
 
@@ -82,29 +65,21 @@ knn_model.fit(featureMatrix_train, targetMatrix_train) #.fit() is where the mode
                                                        # It learns the relationship between them(simply stores training data)
                                                        # Later uses distance to find 5 nearest neighbors
                                                        # "Study this data and remember the patterns"
+
 # Predict using the test data
 predictions = knn_model.predict(featureMatrix_test) # .predict() is where the model makes predictions on new data.
                                                     # The model takes the unseen test data
                                                     # It applies what it learned during .fit()
-                                                    # It outputs predicted labels (ckd or notckd)
+                                                    # It outputs predicted labels
                                                     # It finds the 5 closest training points
                                                     # checks their labels
                                                     # predicts the majority label
                                                     # “Based on what I learned, here is my answer.”
 
 
-##*NEW*
-targetEncoder = LabelEncoder()
-targetMatrix_train_encoded = targetEncoder.fit_transform(targetMatrix_train)
-targetMatrix_test_encoded = targetEncoder.transform(targetMatrix_test)
-predictions_encoded = targetEncoder.transform(predictions)
-
-
 
 
 #After predictions
-
-from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 
 # Compute and display the confusion matrix
 confusionMatrixResult = confusion_matrix(targetMatrix_test, predictions)
@@ -127,39 +102,18 @@ modelF1Score = f1_score(targetMatrix_test, predictions, average='weighted')
 print(f"Model F1 Score: {modelF1Score}")
 
 
+#How changing k affects the behavior of the model
+# Changing the value of k changes how many nearest neighbors the
+# model uses when making predictions.
 
+#Why very small values of k may cause overfitting
+# Small k makes model very sensitive to individual data points.
+# Small k like 1 or 3 only looks at 1 or 3 closest neighbors.
+# That means predictions relies heavily on just a few points.
+# If one of those neighbors is an outlier it can change the
+# predictions by a lot. This can lead to overfitting.
 
-
-# What True Positive, True Negative, False Positive, and False Negative
-# mean in the context of kidney disease prediction?
-
-# True Positive (TP) is when the model correctly predicts a patient
-# has CKD.
-# True Negative (TN) is when the model correctly predicts a patient
-# does not have CKD.
-# False Positive (FP) is when the model incorrectly predicts CKD for a
-# patient who is healthy.
-# False Negative (FN) is when the model incorrectly predicts no CKD
-# for a patient who actually has CKD.
-
-
-# Why accuracy alone may not be enough to evaluate a classification model?
-# Accuracy is calculated as TP + TN / TP + TN + FP + FN.
-# The matrix looks like [[TP FP],[FN TN]]
-
-# Accuracy alone is not enough because it does not account for class imbalance.
-# For example if most patients are healthy. It could fail to detect real CDK cases.
-# Because a model predicting everyone as healthy may have high accuracy.
-# But again, fail to catch the real CKD cases.
-
-
-# Which metric is most important if missing a kidney disease case is
-# very serious, and why?
-# Recall investigates the power of the model in the detection of True
-# responses: calculated as TP / TP + FN
-
-# In this case missing a kidney disease case is very serious (False Negative).
-# Recall is the most important metric. This is because it measures proportion
-# of the actual CKD cases that this model correctly identifies. So we need
-# to expect a high recall metric so patients with CKD are accounted for.
-# This will reduce the risk of undiagnosed cases.
+#Why very large values of k may cause underfitting
+# Larger k values result in smoother and more generalized decision boundaries.
+# In this way the outliers have less influence but can miss the small patterns
+# if k is too large. This leads to underfitting.
