@@ -1,48 +1,41 @@
 import pandas as pd
-from sklearn import datasets
 from sklearn.model_selection import train_test_split
 
-# Load data frame from sklearn Iris dataset
-iris = datasets.load_iris()
-
-# Convert to pandas DataFrame
-loadIrisDataFrame = pd.DataFrame(data=iris.data, columns=iris.feature_names)
-
-# Add classification column (target)
-loadIrisDataFrame["classification"] = iris.target
+#load data frame from csv first
+loadKidneyDiseaseDataFrame = pd.read_csv('kidney_disease.csv')
 
 
-# Create a matrix X that contains all columns except classification.
-# Note: To learn the model we have a data matrix X of variables
-# (features) values. For example number of rooms.
-# 'y' would be house price, target variable.
-# These can be split into training and testing sets using train_test_split function.
+#Create a matrix X that contains all columns except CKD.
+#Note:To learn the model we have a data matrix X of variables
+#     (features) values. For example number of rooms.
+#     'y' would be house price, target variable.
+#     These can be splitting to the training and testing sets using train_test_split function.
 
-X = loadIrisDataFrame.drop(columns=["classification"])
-featureMatrix = loadIrisDataFrame.loc[:, X.columns]
-
-
-# Create a label vector y using classification column
-y = loadIrisDataFrame["classification"]
-targetMatrix = loadIrisDataFrame.loc[:, ["classification"]]
+X = loadKidneyDiseaseDataFrame.drop(columns=["classification"])
+featureMatrix = loadKidneyDiseaseDataFrame.loc[:, X.columns]
 
 
-# Split Training Data (70%)
-# Split Testing Data (30%)
-# Use train_test_split with a fixed random_state
-# test_size=0.3 leaves 70% for training
+
+#Create a label vector y using CKD column
+
+y = loadKidneyDiseaseDataFrame["classification"]
+targetMatrix = loadKidneyDiseaseDataFrame.loc[:, ["classification"]]
+
+
+#Split Training Data(70%)
+#Split Testing Data(30%)
+#Use train_test_split with a fixed random_state
+#random_state(test_size=0.3) leaving rest 70% for training
 featureMatrix_train, featureMatrix_test, targetMatrix_train, targetMatrix_test = train_test_split(
-    featureMatrix,
-    targetMatrix,
-    test_size=0.3,
-    random_state=42
-)
+    featureMatrix, targetMatrix, test_size=0.3)
+
 
 print("Feature Matrix Train:", featureMatrix_train.shape)
 print("Feature Matrix Test:", featureMatrix_test.shape)
 print("Target Matrix Train:", targetMatrix_train.shape)
 print("Target Matrix Test:", targetMatrix_test.shape)
 print(targetMatrix_train["classification"].value_counts())
+
 
 #Note: Train/Test is a method to measure the accuracy of your model.
 #      It is called Train/Test because you split the data set into
@@ -78,3 +71,4 @@ print(targetMatrix_train["classification"].value_counts())
 # (too complex, fits only training data) or if it is
 # underfitted (too simple, cannot capture patterns in the data).
 # This solution gives an objective check to make sure model works on new data.
+
