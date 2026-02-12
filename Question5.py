@@ -1,13 +1,11 @@
 import pandas as pd
-from sklearn import datasets
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 
 #Load data
-iris = datasets.load_iris()
-loadKidneyDiseaseDataFrame = pd.DataFrame(data=iris.data, columns=iris.feature_names)
-loadKidneyDiseaseDataFrame["classification"] = iris.target
+loadKidneyDiseaseDataFrame = pd.read_csv('kidney_disease.csv')
 
 
 #Create a matrix X that contains all columns except CKD.
@@ -16,12 +14,29 @@ featureMatrix = loadKidneyDiseaseDataFrame.loc[:, X.columns]
 
 
 #Create a label vector y using CKD column
-targetMatrix = loadKidneyDiseaseDataFrame["classification"]
+targetMatrix = loadKidneyDiseaseDataFrame["classification"].str.strip().str.lower()
+
+
+#Numeric columns: fill with median
+numericColumns = featureMatrix.select_dtypes(include=['float64', 'int64']).columns
+for col in numericColumns:
+    featureMatrix[col] = featureMatrix[col].fillna(featureMatrix[col].median())
+
+#Categorical columns: fill with mode
+categoricalColumns = featureMatrix.select_dtypes(include=['object', 'string']).columns
+for col in categoricalColumns:
+    featureMatrix[col] = featureMatrix[col].fillna(featureMatrix[col].mode()[0])
+
+#Encode categorical columns
+for col in categoricalColumns:
+    le = LabelEncoder()
+    featureMatrix[col] = le.fit_transform(featureMatrix[col])
+
 
 
 #Train/Test Split (70/30)
 featureMatrix_train, featureMatrix_test, targetMatrix_train, targetMatrix_test = train_test_split(
-    featureMatrix, targetMatrix, test_size=0.3, random_state=42)
+    featureMatrix, targetMatrix, test_size=0.3)
 
 #*NEW*
 #Providied k values
